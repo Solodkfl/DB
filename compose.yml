@@ -1,0 +1,80 @@
+services:
+  auth:
+    image: maven:3.9.11-sapmachine-21
+    container_name: auth
+    depends_on:
+      - mariadb
+    ports:
+      - 9000:9000
+    environment:
+      - DB_DRIVER=org.mariadb.jdbc.Driver
+      - DB_URL=jdbc:mariadb://dkfldkfl.cloud:50001/auth
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=587
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_SMTP_AUTH=true
+      - EMAIL_SMTP_TIMEOUT=5000
+      - EMAIL_SMTP_ENABLE=true
+      - EMAIL_SMTP_SSL=smtp.gmail.com
+      - FILE_UPLOAD_PATH=/usr/local/work/update
+      - SWAGGER_URL=http://solo.dkfldkfl.cloud
+      - RSA_PUBLIC_KEY=classpath:keys/public.pem
+      - RSA_PRIVATE_KEY=classpath:keys/private.pem
+    volumes:
+      - ./app:/usr/local/work/app
+      - ./authorization/update:/usr/local/work/update
+    command: ["java","-jar","/usr/local/work/app/authorization-0.0.1-SNAPSHOT.jar"]
+  gateway:
+    image: maven:3.9.11-sapmachine-21
+    container_name: gateway
+    ports:
+      - 7000:7000
+    environment:
+      - CORS_ORIGIN1=http://pixel.dkfldkfl.cloud
+      - CORS_ORIGIN2=http://gotham.dkfldkfl.cloud
+      - CORS_ORIGIN3=http://solo.dkfldkfl.cloud
+      - CORS_ORIGIN4=http://dkfldkfl.cloud
+      - ROUTE_SOLO_URI=http://app:8003
+      - ROUTE_OAUTH_URI=http://auth:9000
+      - ROUTE_API_URI=http://solo.dkfldkfl.cloud
+    volumes:
+      - ./app:/usr/local/work/app
+    command: ["java","-jar","/usr/local/work/app/gateway-0.0.1-SNAPSHOT.jar"]
+  app:
+    image: maven:3.9.11-sapmachine-21
+    container_name: app
+    depends_on:
+      - mariadb
+    ports:
+      - 8003:8003
+    environment:
+      - DB_DRIVER=org.mariadb.jdbc.Driver
+      - DB_URL=jdbc:mariadb://dkfldkfl.cloud:50001/auth
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SWAGGER_URL=http://solo.dkfldkfl.cloud
+      - JWT_URL=http://192.168.0.253:9000
+    volumes:
+      - ./app:/usr/local/work/app
+    command: ["java","-jar","/usr/local/work/app/solo-0.0.1-SNAPSHOT.jar"]
+  mariadb:
+    container_name: mariadb
+    image: mariadb:11.8.2
+    ports: 
+      - 43306:3306
+    volumes:
+      - ./mariadb/conf.d:/etc/mysql/conf.d:ro
+      - ./mariadb/data:/var/lib/mysql:rw
+      - ./mariadb/initdb.d:/docker-entrypoint-initdb.d:ro
+    environment:
+      - MYSQL_HOST=localhost
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=auth
+      # - MYSQL_USER=study
+      # - MYSQL_PASSWORD=study
+      - TZ=Asia/Seoul
+      - LC_ALL:en_US.UTF-8
