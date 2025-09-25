@@ -1,2 +1,2 @@
-# DB
-mariaDB
+# distribute
+
